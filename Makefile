@@ -1,6 +1,6 @@
 CXX := g++-14
-FLAGS := -std=c++23 -Wall -Wextra
-LIBS := -lSDL2 -lX11 -lXrandr
+FLAGS := -std=c++23 -Wall -Wextra $(shell pkg-config --cflags gio-2.0)
+LIBS := -lSDL2 -lX11 -lXrandr $(shell pkg-config --libs gio-2.0)
 
 BUILD_DIR := build
 TARGET := zoomer

@@ -17,13 +17,21 @@ set(SRCS
 # Executable
 add_executable(${PROJECT_NAME} ${SRCS})
 
+find_package(PkgConfig REQUIRED)
+pkg_check_modules(GIO REQUIRED gio-2.0)
+
 find_package(X11 REQUIRED COMPONENTS Xrandr)
 find_package(SDL2 REQUIRED)
+
+target_include_directories(${PROJECT_NAME} PRIVATE
+    ${GIO_INCLUDE_DIRS}
+)
 
 target_link_libraries(${PROJECT_NAME} PRIVATE
     X11::X11
     X11::Xrandr
     SDL2::SDL2-static
+    ${GIO_LIBRARIES}
 )
 
 # Compiler warnings

@@ -3,6 +3,7 @@
 #include <SDL2/SDL.h>
 #include <X11/Xlib.h>
 #include <X11/extensions/Xrandr.h>
+#include <gio/gio.h>
 #include <algorithm>
 #include <cmath>
 #include <cstdio>
@@ -44,21 +45,87 @@ MonitorRect getPrimaryMonitorBounds() {
     return rect;
 }
 
+// Direct GNOME Shell D-Bus screenshot: captures area directly via compositor in ~90ms
+bool captureScreenGNOME(int x, int y, int width, int height, const char* outPath) {
+    GError* error = nullptr;
+    GDBusConnection* conn = g_bus_get_sync(G_BUS_TYPE_SESSION, nullptr, &error);
+    if (!conn) {
+        if (error) g_error_free(error);
+        return false;
+    }
+
+    // 1. Request well-known name org.gnome.Screenshot
+    GVariant* res = g_dbus_connection_call_sync(
+        conn,
+        "org.freedesktop.DBus",
+        "/org/freedesktop/DBus",
+        "org.freedesktop.DBus",
+        "RequestName",
+        g_variant_new("(su)", "org.gnome.Screenshot", 4),
+        G_VARIANT_TYPE("(u)"),
+        G_DBUS_CALL_FLAGS_NONE,
+        1000,
+        nullptr,
+        &error
+    );
+    if (!res) {
+        if (error) g_error_free(error);
+        g_object_unref(conn);
+        return false;
+    }
+    g_variant_unref(res);
+
+    // 2. Call ScreenshotArea directly on GNOME Shell
+    res = g_dbus_connection_call_sync(
+        conn,
+        "org.gnome.Shell.Screenshot",
+        "/org/gnome/Shell/Screenshot",
+        "org.gnome.Shell.Screenshot",
+        "ScreenshotArea",
+        g_variant_new("(iiiibs)", x, y, width, height, FALSE, outPath),
+        G_VARIANT_TYPE("(bs)"),
+        G_DBUS_CALL_FLAGS_NONE,
+        3000,
+        nullptr,
+        &error
+    );
+
+    if (!res) {
+        if (error) g_error_free(error);
+        g_object_unref(conn);
+        return false;
+    }
+
+    gboolean success = FALSE;
+    const gchar* usedFilename = nullptr;
+    g_variant_get(res, "(b&s)", &success, &usedFilename);
+    g_variant_unref(res);
+    g_object_unref(conn);
+
+    return (success == TRUE);
+}
+
 int main(int argc, char* argv[]) {
     MonitorRect primary = getPrimaryMonitorBounds();
-    const char* tmpPath = "/dev/shm/gnome_shot.png";
+    const char* tmpPath = "/dev/shm/zoomer_shot.png";
+    bool capturedArea = false;
 
-    // 1. Capture full desktop directly to RAM (/dev/shm) using trusted gnome-screenshot
-    std::string cmd = std::string("gnome-screenshot -f ") + tmpPath;
-    if (std::system(cmd.c_str()) != 0) {
-        std::println(stderr, "gnome-screenshot failed");
-        return 1;
+    // 1. Fast capture: direct GNOME Shell D-Bus ScreenshotArea (~90ms)
+    if (captureScreenGNOME(primary.x, primary.y, primary.width, primary.height, tmpPath)) {
+        capturedArea = true;
+    } else {
+        // Fallback: gnome-screenshot CLI if D-Bus is unavailable
+        std::string cmd = std::string("gnome-screenshot -f ") + tmpPath;
+        if (std::system(cmd.c_str()) != 0) {
+            std::println(stderr, "Screenshot failed");
+            return 1;
+        }
     }
 
     // 2. Decode PNG directly from RAM
     int fullW, fullH, channels;
     unsigned char* pixels = stbi_load(tmpPath, &fullW, &fullH, &channels, 4);
-    std::remove(tmpPath); // Clean up RAM file immediately
+    std::remove(tmpPath);
     if (!pixels) {
         std::println(stderr, "Failed to load screenshot: {}", stbi_failure_reason());
         return 1;
@@ -132,8 +199,10 @@ int main(int argc, char* argv[]) {
     }
     SDL_UpdateTexture(dimMaskTexture, nullptr, maskPixels.data(), SPOT_SIZE * 4);
 
-    // 5. GPU-side crop: render only the primary monitor's rectangle
-    SDL_Rect srcRect = { primary.x, primary.y, primary.width, primary.height };
+    // 5. Source rectangle: cropped directly to primary monitor
+    SDL_Rect srcRect = capturedArea
+        ? SDL_Rect{ 0, 0, primary.width, primary.height }
+        : SDL_Rect{ primary.x, primary.y, primary.width, primary.height };
 
     // Zoom and pan state
     float currentZoom = 1.0f;
