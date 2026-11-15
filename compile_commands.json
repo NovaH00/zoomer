@@ -1,0 +1,17 @@
+[
+  {
+    "arguments": [
+      "/usr/bin/g++-14",
+      "-c",
+      "-std=c++23",
+      "-Wall",
+      "-Wextra",
+      "-o",
+      "build/main",
+      "src/main.cpp"
+    ],
+    "directory": "/home/nova/src/programming/zoomer",
+    "file": "/home/nova/src/programming/zoomer/src/main.cpp",
+    "output": "/home/nova/src/programming/zoomer/build/main"
+  }
+]
