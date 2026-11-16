@@ -215,6 +215,7 @@ int main(int argc, char* argv[]) {
     // Lightbulb spotlight state
     const float MAX_DIM_ALPHA = 0.72f;
     bool spotlightOn = false;
+    bool forceSpotlightOff = false;
     float spotlightRadius = static_cast<float>(primary.height) * 0.22f;
 
     // Direct X11 pointer querying for zero-latency cursor tracking
@@ -306,14 +307,21 @@ int main(int argc, char* argv[]) {
                     targetOffX = std::clamp(targetOffX, minOffX, 0.0f);
                     targetOffY = std::clamp(targetOffY, minOffY, 0.0f);
 
-                    // Zooming in automatically turns on the lightbulb effect
-                    spotlightOn = true;
+                    if(!forceSpotlightOff) {
+                        spotlightOn = true;
+                    } else {
+                        spotlightOn = false;
+                    }
                 }
             }
         } else if (ev.type == SDL_MOUSEBUTTONDOWN) {
             if (ev.button.button == SDL_BUTTON_MIDDLE) {
-                // Scroll wheel button click toggles the lightbulb effect
-                spotlightOn = !spotlightOn;
+                forceSpotlightOff = !forceSpotlightOff;
+                if (!forceSpotlightOff) {
+                    spotlightOn = true;
+                } else {
+                    spotlightOn = false;
+                }
             } else if (ev.button.button == SDL_BUTTON_LEFT) {
                 // Left mouse button drags around the zoomed screen
                 if (targetZoom > 1.0f || currentZoom > 1.0f) {
