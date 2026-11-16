@@ -1,17 +1,8 @@
 [
-  {
-    "arguments": [
-      "/usr/bin/g++-14",
-      "-c",
-      "-std=c++23",
-      "-Wall",
-      "-Wextra",
-      "-o",
-      "build/main",
-      "src/main.cpp"
-    ],
-    "directory": "/home/nova/src/programming/zoomer",
-    "file": "/home/nova/src/programming/zoomer/src/main.cpp",
-    "output": "/home/nova/src/programming/zoomer/build/main"
-  }
+{
+  "directory": "/home/nova/src/programming/zoomer/build",
+  "command": "g++-14  -I/usr/include/glib-2.0 -I/usr/lib/x86_64-linux-gnu/glib-2.0/include -I/usr/include/libmount -I/usr/include/blkid -isystem /usr/include/SDL2 -std=c++23 -Wall -Wextra -Wpedantic -o CMakeFiles/zoomer.dir/src/main.cpp.o -c /home/nova/src/programming/zoomer/src/main.cpp",
+  "file": "/home/nova/src/programming/zoomer/src/main.cpp",
+  "output": "CMakeFiles/zoomer.dir/src/main.cpp.o"
+}
 ]
